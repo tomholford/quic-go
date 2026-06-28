@@ -36,6 +36,21 @@ func TestStreamDeadlines(t *testing.T) {
 	require.Zero(t, n)
 }
 
+func TestStreamWaitForReceiveFinalSize(t *testing.T) {
+	const streamID protocol.StreamID = 1337
+	mockCtrl := gomock.NewController(t)
+	mockSender := NewMockStreamSender(mockCtrl)
+	mockFC := mocks.NewMockStreamFlowController(mockCtrl)
+	str := newStream(context.Background(), streamID, mockSender, mockFC, false)
+
+	mockFC.EXPECT().UpdateHighestReceived(protocol.ByteCount(6), true, gomock.Any())
+	require.NoError(t, str.handleStreamFrame(&wire.StreamFrame{Data: []byte("foobar"), Fin: true}, monotime.Now()))
+
+	size, err := str.WaitForReceiveFinalSize(context.Background())
+	require.NoError(t, err)
+	require.EqualValues(t, 6, size)
+}
+
 func TestStreamCompletion(t *testing.T) {
 	completeReadSide := func(
 		t *testing.T,
