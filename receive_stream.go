@@ -93,6 +93,9 @@ func (s *ReceiveStream) WaitForFinalSize(ctx context.Context) (int64, error) {
 		finalSizeChan := s.finalSizeChan
 		s.mutex.Unlock()
 
+		if size != protocol.MaxByteCount {
+			return int64(size), nil
+		}
 		if closeErr != nil {
 			return 0, closeErr
 		}

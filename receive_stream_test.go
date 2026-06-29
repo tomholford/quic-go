@@ -583,12 +583,17 @@ func TestReceiveStreamWaitForFinalSizeAfterFIN(t *testing.T) {
 	mockFC := mocks.NewMockStreamFlowController(gomock.NewController(t))
 	str := newReceiveStream(42, nil, mockFC)
 
-	mockFC.EXPECT().UpdateHighestReceived(protocol.ByteCount(0), true, gomock.Any())
-	require.NoError(t, str.handleStreamFrame(&wire.StreamFrame{Fin: true}, monotime.Now()))
+	mockFC.EXPECT().UpdateHighestReceived(protocol.ByteCount(6), true, gomock.Any())
+	require.NoError(t, str.handleStreamFrame(&wire.StreamFrame{Data: []byte("foobar"), Fin: true}, monotime.Now()))
 
 	size, err := str.WaitForFinalSize(context.Background())
 	require.NoError(t, err)
-	require.Zero(t, size)
+	require.EqualValues(t, 6, size)
+
+	str.closeForShutdown(assert.AnError)
+	size, err = str.WaitForFinalSize(context.Background())
+	require.NoError(t, err)
+	require.EqualValues(t, 6, size)
 }
 
 func TestReceiveStreamWaitForFinalSizeAfterCancelRead(t *testing.T) {
